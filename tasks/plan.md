@@ -16,11 +16,11 @@
 
 ### Phase A: Foundation & risk reduction
 
-- [ ] Task A1: Test scaffolding (JUnit4/5 + Mockito)
+- [x] Task A1: Test scaffolding (JUnit4/5 + Mockito)
 - [ ] Task A2: Raw-queue transport spike (Windows + Linux) — highest risk, isolated
 
 ### Checkpoint: Foundation
-- [ ] `mvn test` runs with the new test stack alongside existing `AppTest`
+- [x] `mvn test` runs with the new test stack alongside existing `AppTest`
 - [ ] Transport spike proves byte-for-byte fidelity on both OSes (or a documented fallback is chosen)
 
 ### Phase B: Message routing (backward compatible)
@@ -68,15 +68,21 @@
 
 ## Task Details
 
-### Task A1: Test scaffolding
+### Task A1: Test scaffolding — DONE
 **Description:** Add `junit` (4 or 5) and `mockito-core` as test-scope deps to `pom.xml`. Existing JUnit 3.8.1 `AppTest` stays as-is; all new tests use the modern stack.
 **Acceptance criteria:**
-- [ ] `mvn test` runs a trivial new JUnit4/5 test successfully alongside existing `AppTest`
-- [ ] Mockito is usable (a throwaway test mocking an interface compiles/runs)
+- [x] `mvn test` runs a trivial new JUnit4/5 test successfully alongside existing `AppTest`
+- [x] Mockito is usable (a throwaway test mocking an interface compiles/runs)
 **Verification:** `mvn -q test` output shows the new test executed.
 **Dependencies:** None.
 **Files:** `pom.xml`.
 **Estimated scope:** XS (1 file).
+
+**Implementation notes:**
+- The `junit` dependency was *upgraded in place* from 3.8.1 to 4.13.2 rather than adding a second `junit` artifact — JUnit 4's jar still bundles the legacy `junit.framework` package, so the existing JUnit-3-style `AppTest` keeps working unchanged (verified). Avoids two conflicting `junit` versions on the test classpath.
+- Added `mockito-core:4.11.0` (last Mockito 4.x release, JDK 8-compatible — the project compiles with `-source/-target 8`).
+- Added `src/test/java/id/modefashion/printer/ScaffoldingSpikeTest.java` to prove JUnit4 `@Test` + Mockito `mock()/when()/verify()` work together. Kept as a real (not deleted) minimal regression check of the test toolchain itself.
+- **Unplanned but required fix, done first:** the build didn't compile at all on this machine before any of this — Lombok 1.18.38 silently fails to generate `@Data` methods on JDK 26 (this machine's default `java`), so `ReceiptWorker`/`PosReceipt` failed with "cannot find symbol: getType()/getContent()". Confirmed pre-existing on `master` (unrelated to this task) by stashing and rebuilding clean. Fixed by pinning the build to JDK 21 (`.java-version` + documented in `CLAUDE.md`), not by adding `--add-opens` flags (tested and confirmed unnecessary on JDK 21; would also break real JDK 8 builds, so intentionally not added).
 
 ### Task A2: Raw-queue transport spike (Windows + Linux)
 **Description:** Determine and validate the mechanism for writing raw, untranslated bytes to the LX-300 through the OS print queue on both target OSes, before any ESC/P rendering logic is built on top. Primary approach: `javax.print` `DocFlavor.BYTE_ARRAY.AUTOSENSE` against a queue configured OS-side as raw passthrough — a CUPS raw queue on Linux, a Generic/Text-Only driver on a RAW-datatype port on Windows. Build `RawPrintTransport` interface + `JavaxRawPrintTransport` impl, plus a throwaway manual harness (not part of the automated suite). Must fail loud (throw/log-and-abort) if the named queue isn't found — no fallback to system default. Only build a platform-specific fallback (e.g. JNA for WinSpool) if the primary approach fails byte-fidelity validation.

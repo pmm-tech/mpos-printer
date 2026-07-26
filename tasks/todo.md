@@ -3,7 +3,7 @@
 See `tasks/plan.md` for full task details, acceptance criteria, and verification steps.
 
 ## Phase A: Foundation & risk reduction
-- [ ] A1: Test scaffolding (JUnit4/5 + Mockito) — XS
+- [x] A1: Test scaffolding (JUnit4/5 + Mockito) — XS
 - [ ] A2: Raw-queue transport spike (Windows + Linux) — S/M, highest risk, do early
 
 **Checkpoint:** `mvn test` runs with new stack; transport spike proves byte fidelity on both OSes (or fallback chosen)
