@@ -9,7 +9,7 @@ See `tasks/plan.md` for full task details, acceptance criteria, and verification
 **Checkpoint:** `mvn test` runs with new stack (done); transport byte-fidelity on real OSes/hardware — **still open**
 
 ## Phase B: Message routing (backward compatible)
-- [ ] B1: Extend `ReceiptData` DTO with `printer`/`formFeed` — XS
+- [x] B1: Extend `ReceiptData` DTO with `printer`/`formFeed` — XS
 - [ ] B2: `PrinterBackend` interface + `Graphics2DPrinterBackend` (zero behavior change) — S
 - [ ] B3: `PrintServer` routing → stub `EscpPrinterBackend` — S/M
 

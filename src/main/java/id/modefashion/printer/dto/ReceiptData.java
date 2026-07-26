@@ -7,4 +7,6 @@ import lombok.Data;
 public class ReceiptData {
   private int total;
   private List<ReceiptLineData> data;
+  private String printer;
+  private boolean formFeed;
 }

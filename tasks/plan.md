@@ -25,7 +25,7 @@
 
 ### Phase B: Message routing (backward compatible)
 
-- [ ] Task B1: Extend `ReceiptData` DTO with `printer`/`formFeed`
+- [x] Task B1: Extend `ReceiptData` DTO with `printer`/`formFeed`
 - [ ] Task B2: `PrinterBackend` interface + `Graphics2DPrinterBackend` (zero behavior change)
 - [ ] Task B3: `PrintServer` routing → stub `EscpPrinterBackend`
 
@@ -107,11 +107,11 @@
 - **Real-queue byte-fidelity validation (Linux/Windows/physical LX-300) is explicitly NOT done and remains an open gate before Phase C ships**, per the plan's own fallback language above. Attempted the local-CUPS-as-Linux-proxy approach (this Mac's CUPS is the same stack Linux uses): bind a loopback `nc` listener, add a temporary `socket://127.0.0.1:19100` raw CUPS queue via `lpadmin`, send bytes through `RawPrintTransportManualHarness`, byte-compare. Blocked structurally, not by choice: the sandbox's `sudo` has no TTY to accept a password non-interactively, so `lpadmin` (which requires root) can't run here at all. No queue was actually created (the failed call errored out before creating anything — confirmed via `lpstat`). This was a deliberate, user-approved attempt (two separate permission grants: the loopback listener, then `sudo`), not a skipped step.
 - **Before this can be considered safe to ship**, someone needs to run `RawPrintTransportManualHarness <queueName>` against: (1) a real Linux box with a CUPS raw queue, (2) a real Windows box with a RAW-datatype/Generic-Text queue, (3) ideally the physical LX-300 itself — and confirm byte-for-byte fidelity each time (no line-ending translation, no injected headers).
 
-### Task B1: Extend `ReceiptData` DTO
+### Task B1: Extend `ReceiptData` DTO — DONE
 **Description:** Add `private String printer;` and `private boolean formFeed;` to `dto/ReceiptData.java` (Lombok `@Data` generates accessors).
 **Acceptance criteria:**
-- [ ] `ReceiptData` has `printer`/`formFeed` fields with Lombok-generated getters/setters
-- [ ] Unit test asserts correct Gson deserialization of `{"printer":"escp","formFeed":true,"data":[...]}`, including `printer == null` when absent
+- [x] `ReceiptData` has `printer`/`formFeed` fields with Lombok-generated getters/setters
+- [x] Unit test asserts correct Gson deserialization of `{"printer":"escp","formFeed":true,"data":[...]}`, including `printer == null` when absent
 **Verification:** `mvn test` — new `ReceiptDataTest`.
 **Dependencies:** A1.
 **Files:**
