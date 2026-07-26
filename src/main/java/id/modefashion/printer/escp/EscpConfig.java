@@ -11,6 +11,7 @@ public class EscpConfig {
 
   private static final int DEFAULT_PITCH_CPI = 10;
   private static final int DEFAULT_LINE_SPACING_UNITS = 30; // 30/180" = 1/6" (standard 6 LPI)
+  private static final int DEFAULT_QUEUE_CAPACITY = 100;
 
   private final PropertiesConfiguration config;
 
@@ -28,5 +29,9 @@ public class EscpConfig {
 
   public int lineSpacingUnits() {
     return config.getInt("escp.line.spacing", DEFAULT_LINE_SPACING_UNITS);
+  }
+
+  public int queueCapacity() {
+    return config.getInt("escp.queue.capacity", DEFAULT_QUEUE_CAPACITY);
   }
 }

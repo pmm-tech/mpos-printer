@@ -52,7 +52,7 @@
 
 ### Phase E: Durability / retry queue
 
-- [ ] Task E1: In-memory bounded queue + background consumer (happy path)
+- [x] Task E1: In-memory bounded queue + background consumer (happy path)
 - [ ] Task E2: Retry + backoff + cap + loud alert logging
 
 ### Checkpoint 4: Reliability
@@ -227,18 +227,28 @@
 - One-line change: `commandBuilder.build(data, false)` → `commandBuilder.build(data, formFeed)`. Byte-level form-feed correctness was already covered by C1's `EscpCommandBuilderTest`; this task's own test (`EscpPrinterBackendTest.formFeedFlagIsPassedThroughToCommandBuilder`) proves the *wiring* — that the flag `JobRouter` parsed off `ReceiptData` actually reaches the builder call, not just that the builder itself handles the flag correctly in isolation. Also renamed/simplified the C3-era `..._formFeedNotWiredYet` test now that it is wired.
 - Physical form-advance timing observation (two real jobs, one plain one form-feeding) needs a real LX-300 and is out of reach here — tracked as the same open gate as A2/C3.
 
-### Task E1: In-memory bounded queue + background consumer
+### Task E1: In-memory bounded queue + background consumer — DONE
 **Description:** `EscpJobQueue` — bounded queue (e.g. `ArrayBlockingQueue<EscpJob>`, capacity from `escp.queue.capacity`) + single background consumer calling `EscpPrinterBackend`. The escp path now enqueues instead of printing synchronously. No retry yet — a failure just logs and moves on. Explicitly not disk-backed: a process restart loses queued-but-unprinted jobs (accepted tradeoff).
 **Acceptance criteria:**
-- [ ] `EscpJobQueueTest` (fake backend) confirms in-order enqueue/drain and correct at-capacity behavior
-- [ ] Live WebSocket: escp job returns from `onMessage` immediately (enqueued); printing happens asynchronously, observable via log timestamps
+- [x] `EscpJobQueueTest` (fake backend) confirms in-order enqueue/drain and correct at-capacity behavior
+- [x] Live WebSocket: escp job returns from `onMessage` immediately (enqueued); printing happens asynchronously — verified at the unit level (`drainsJobsInOrderToDelegateBackend` starts the real consumer thread and polls for async delivery); not re-verified over an actual live WebSocket connection, which would need the same live-server smoke test already skipped in B3/C3 for the same reason (avoiding a real print job on this machine's configured printer)
 **Verification:** Unit test with fake backend; manual WebSocket + log timestamp inspection.
 **Dependencies:** C3/D1.
 **Files:**
 - `src/main/java/id/modefashion/printer/backend/EscpJobQueue.java`
-- `src/main/java/id/modefashion/printer/backend/JobRouter.java` (enqueue instead of direct call)
+- `src/main/java/id/modefashion/printer/PrintServer.java` (wiring)
+- `src/main/java/id/modefashion/printer/escp/EscpConfig.java` (new `queueCapacity()`)
+- `printer.properties` (new `escp.queue.capacity` key)
 - `src/test/java/id/modefashion/printer/backend/EscpJobQueueTest.java`
+- `src/test/java/id/modefashion/printer/escp/EscpConfigTest.java` (extended)
 **Estimated scope:** S/M (3 files).
+
+**Implementation notes:**
+- **Design deviation from the plan's file list**: `JobRouter` was NOT touched. Instead, `EscpJobQueue implements PrinterBackend` and *decorates* the real `EscpPrinterBackend` — the consumer thread dequeues and calls the wrapped backend. `PrintServer` wires `new EscpJobQueue(new EscpPrinterBackend(config), capacity)` as the escp backend it hands to `JobRouter`, which is completely unaware queueing exists. Smaller diff, one clean seam, and `JobRouterTest`'s existing routing assertions stay valid unchanged.
+- Added `escp.queue.capacity` (default 100) to `EscpConfig`/`printer.properties` — not originally listed under C2 since the need wasn't known until this task, but it's an `escp.*` key so it belongs in the same accessor for consistency.
+- Overflow behavior: `queue.offer()` (non-blocking) — a full queue drops the new job (not the caller's, not a random one) and logs a loud `ERROR` with a running dropped-job count, tested by starting the queue *without* calling `start()` so the consumer never drains it, making the capacity boundary deterministic to assert.
+- Consumer thread is a daemon thread; `stop()` interrupts it. `PrintServer` never calls `stop()` today (no shutdown hook exists elsewhere in the app either) — acceptable for now since a daemon thread doesn't block JVM exit, but worth revisiting if a graceful-shutdown story is ever needed.
+- `EscpPrinterBackend` itself was not modified — it still catches and logs `PrintTransportException` internally rather than throwing, so E1's "failure just logs and moves on" requirement is satisfied for free by the existing C3 behavior. E2 will need to reconsider this if retry requires visibility into success/failure.
 
 ### Task E2: Retry + backoff + cap + loud alert
 **Description:** Consumer catches write failures, retries with configurable backoff/cap, tracks "printer down since" state, emits a distinctly-taggable `ALERT` log line when the cap or a down-duration threshold is hit. Overflow policy (reject-new / drop-oldest / hold-indefinitely) is config-driven (`escp.queue.overflow.policy`), not hardcoded — default value needs human sign-off (open question).

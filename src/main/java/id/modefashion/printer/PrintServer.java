@@ -12,21 +12,26 @@ import org.java_websocket.server.WebSocketServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import id.modefashion.printer.backend.EscpJobQueue;
 import id.modefashion.printer.backend.EscpPrinterBackend;
 import id.modefashion.printer.backend.Graphics2DPrinterBackend;
 import id.modefashion.printer.backend.JobRouter;
+import id.modefashion.printer.escp.EscpConfig;
 
 public class PrintServer extends WebSocketServer {
   private Set<WebSocket> connections;
   private PropertiesConfiguration config;
   private JobRouter jobRouter;
+  private EscpJobQueue escpJobQueue;
   private static final Logger logger = LoggerFactory.getLogger(PrintServer.class);
 
   public PrintServer(PropertiesConfiguration config) {
     super(new InetSocketAddress(config.getInt("printer.port")));
     this.connections = Collections.synchronizedSet(new HashSet<WebSocket>());
     this.config = config;
-    this.jobRouter = new JobRouter(new Graphics2DPrinterBackend(config), new EscpPrinterBackend(config));
+    this.escpJobQueue = new EscpJobQueue(new EscpPrinterBackend(config), new EscpConfig(config).queueCapacity());
+    this.escpJobQueue.start();
+    this.jobRouter = new JobRouter(new Graphics2DPrinterBackend(config), this.escpJobQueue);
   }
 
   @Override

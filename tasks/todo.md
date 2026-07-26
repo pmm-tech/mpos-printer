@@ -28,7 +28,7 @@ See `tasks/plan.md` for full task details, acceptance criteria, and verification
 **Checkpoint 3:** multi-part-form (feed per doc) and journal (never) jobs both logic-verified (done); physical LX-300 validation — **still open, same blocker as A2**
 
 ## Phase E: Durability / retry queue
-- [ ] E1: In-memory bounded queue + background consumer — S/M
+- [x] E1: In-memory bounded queue + background consumer — S/M (JobRouter untouched; EscpJobQueue decorates EscpPrinterBackend instead)
 - [ ] E2: Retry + backoff + cap + loud alert logging — S/M
 
 **Checkpoint 4:** printer-offline scenario fails loudly, not silently; no disk persistence added
