@@ -18,9 +18,9 @@ See `tasks/plan.md` for full task details, acceptance criteria, and verification
 ## Phase C: Real ESC/P text output
 - [x] C1: ESC/P command byte builder (pure, unit-tested) — S/M
 - [x] C2: `escp.*` config keys + `EscpConfig` accessor — XS/S
-- [ ] C3: Wire `EscpPrinterBackend` to real bytes + transport — S/M
+- [x] C3: Wire `EscpPrinterBackend` to real bytes + transport — S/M (unit-verified; real-printer leg blocked, same as A2)
 
-**Checkpoint 2 (core value delivery):** real ESC/P job over WebSocket prints correctly on LX-300, both OSes, synchronously
+**Checkpoint 2 (core value delivery):** code path unit-verified end-to-end (done); real ESC/P job printing correctly on physical LX-300, both OSes — **still open, same blocker as A2**
 
 ## Phase D: Form-feed control
 - [ ] D1: Wire real `formFeed` flag end-to-end — XS/S

@@ -26,7 +26,7 @@ public class PrintServer extends WebSocketServer {
     super(new InetSocketAddress(config.getInt("printer.port")));
     this.connections = Collections.synchronizedSet(new HashSet<WebSocket>());
     this.config = config;
-    this.jobRouter = new JobRouter(new Graphics2DPrinterBackend(config), new EscpPrinterBackend());
+    this.jobRouter = new JobRouter(new Graphics2DPrinterBackend(config), new EscpPrinterBackend(config));
   }
 
   @Override

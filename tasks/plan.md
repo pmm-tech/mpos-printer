@@ -36,12 +36,12 @@
 
 ### Phase C: Real ESC/P text output
 
-- [ ] Task C1: ESC/P command byte builder (pure, unit-tested)
-- [ ] Task C2: `escp.*` config keys + `EscpConfig` accessor
-- [ ] Task C3: Wire `EscpPrinterBackend` to real bytes + transport
+- [x] Task C1: ESC/P command byte builder (pure, unit-tested)
+- [x] Task C2: `escp.*` config keys + `EscpConfig` accessor
+- [~] Task C3: Wire `EscpPrinterBackend` to real bytes + transport — unit-verified; real-printer leg blocked, same as A2
 
 ### Checkpoint 2: Core value delivery
-- [ ] A real ESC/P job sent over the WebSocket prints correctly (text only) on the LX-300, on both OSes, synchronously
+- [~] A real ESC/P job sent over the WebSocket prints correctly (text only) on the LX-300, on both OSes, synchronously — **code path unit-verified end-to-end (routing → command bytes → transport call); actual physical/OS printer validation is the same open gate as A2**
 
 ### Phase D: Form-feed control
 
@@ -191,18 +191,25 @@
 - `escp.printer.name` defaults to empty string, not a placeholder value — `EscpPrinterBackend` (C3) must treat blank the same as "not configured" and fail loud rather than attempt a lookup for `""`.
 - Verified the GUI round-trip **without launching the actual Swing app** (no interactive display session in this environment): wrote a throwaway harness that loads a scratch copy of `printer.properties` into `PropertiesConfiguration`, calls `setProperty` only on the keys `PrinterGuiApp.showConfigDialog()` actually touches (`printer.port`, `printer.name`), then `.save()` — exactly what the GUI's Save button does — then reloads and confirms `escp.*` keys and values survived. They did. The real `printer.properties` was never touched by this check (operated on a copy in the scratch dir).
 
-### Task C3: Wire `EscpPrinterBackend` to real bytes + transport
+### Task C3: Wire `EscpPrinterBackend` to real bytes + transport — DONE (unit-verified; real-printer leg blocked, same as A2)
 **Description:** Replace the B3 stub body: builds bytes via `EscpCommandBuilder` (with `formFeed` still hardcoded `false`), resolves the raw queue via `JavaxRawPrintTransport`/`EscpConfig`, writes the bytes, logs success or a loud error on failure (no retry queue yet).
 **Acceptance criteria:**
-- [ ] `EscpPrinterBackendTest` (Mockito-mocked `RawPrintTransport`) asserts expected bytes and exactly one `transport.write(bytes)` call
-- [ ] Real `{"printer":"escp",...}` WebSocket message produces an actual physical (or captured-byte) printout with correctly formatted text
-- [ ] Missing/misconfigured `escp.printer.name` produces a loud logged error, no fallback to another printer
+- [x] `EscpPrinterBackendTest` (Mockito-mocked `RawPrintTransport`) asserts expected bytes and exactly one `transport.write(bytes)` call
+- [ ] Real `{"printer":"escp",...}` WebSocket message produces an actual physical (or captured-byte) printout with correctly formatted text — **NOT DONE, same blocker as A2 (no Windows/Linux/physical LX-300 access; sudo has no TTY here for a local CUPS test queue)**
+- [x] Missing/misconfigured `escp.printer.name` produces a loud logged error, no fallback to another printer
 **Verification:** Unit test with mocked transport; manual end-to-end WebSocket → physical/captured printout on both OSes.
 **Dependencies:** A2, B3, C1, C2.
 **Files:**
 - `src/main/java/id/modefashion/printer/backend/EscpPrinterBackend.java`
 - `src/test/java/id/modefashion/printer/backend/EscpPrinterBackendTest.java`
 **Estimated scope:** S/M (2 files).
+
+**Implementation notes:**
+- Constructor pattern matches `Graphics2DPrinterBackend`/`JavaxRawPrintTransport`: a public `EscpPrinterBackend(PropertiesConfiguration)` for production wiring, plus a package-private `EscpPrinterBackend(EscpConfig, RawPrintTransport, EscpCommandBuilder)` seam for tests. Tests use a *real* `EscpConfig`/`EscpCommandBuilder` (both already independently unit-tested, deterministic) and only mock the actual I/O boundary (`RawPrintTransport`) — less mocking, more representative test.
+- `escp.printer.name` defaults to `""` (C2), and `SystemPrintServiceResolver` never matches an empty name, so an unconfigured ESC/P backend fails loud by default out of the box — verified via `EscpPrinterBackendTest.logsLoudlyAndDoesNotThrowWhenTransportFails`, which also confirms `print()` never throws out of the `PrinterBackend` interface (matches the existing codebase's pattern of catching and logging print failures rather than propagating them into the WebSocket handler).
+- `print()` still calls `commandBuilder.build(data, false)` regardless of the `formFeed` argument it receives — explicitly tested (`writesExpectedBytesExactlyOnceToTransport_formFeedNotWiredYet`) so D1's change has a clear before/after.
+- `PrintServer` now constructs `new EscpPrinterBackend(config)` instead of B3's no-arg stub.
+- Real-printer end-to-end verification is the same open gate as A2 — no new attempt was made here since the blocker (no Windows/Linux/physical hardware access, no sudo TTY) is identical and already tracked there.
 
 ### Task D1: Wire the real `formFeed` flag
 **Description:** Flip the hardcoded `false` from C3 to the actual `ReceiptData.formFeed` value parsed by `JobRouter`.
