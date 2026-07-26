@@ -17,11 +17,11 @@
 ### Phase A: Foundation & risk reduction
 
 - [x] Task A1: Test scaffolding (JUnit4/5 + Mockito)
-- [ ] Task A2: Raw-queue transport spike (Windows + Linux) — highest risk, isolated
+- [~] Task A2: Raw-queue transport spike (Windows + Linux) — code + unit tests done; hardware validation blocked, see notes
 
 ### Checkpoint: Foundation
 - [x] `mvn test` runs with the new test stack alongside existing `AppTest`
-- [ ] Transport spike proves byte-for-byte fidelity on both OSes (or a documented fallback is chosen)
+- [ ] Transport spike proves byte-for-byte fidelity on both OSes — **OPEN: blocked by lack of Windows/Linux/physical-LX-300 access from this sandbox; explicit gate before Phase C ships to production**
 
 ### Phase B: Message routing (backward compatible)
 
@@ -84,19 +84,28 @@
 - Added `src/test/java/id/modefashion/printer/ScaffoldingSpikeTest.java` to prove JUnit4 `@Test` + Mockito `mock()/when()/verify()` work together. Kept as a real (not deleted) minimal regression check of the test toolchain itself.
 - **Unplanned but required fix, done first:** the build didn't compile at all on this machine before any of this — Lombok 1.18.38 silently fails to generate `@Data` methods on JDK 26 (this machine's default `java`), so `ReceiptWorker`/`PosReceipt` failed with "cannot find symbol: getType()/getContent()". Confirmed pre-existing on `master` (unrelated to this task) by stashing and rebuilding clean. Fixed by pinning the build to JDK 21 (`.java-version` + documented in `CLAUDE.md`), not by adding `--add-opens` flags (tested and confirmed unnecessary on JDK 21; would also break real JDK 8 builds, so intentionally not added).
 
-### Task A2: Raw-queue transport spike (Windows + Linux)
+### Task A2: Raw-queue transport spike (Windows + Linux) — CODE DONE, HARDWARE VALIDATION BLOCKED (see notes)
 **Description:** Determine and validate the mechanism for writing raw, untranslated bytes to the LX-300 through the OS print queue on both target OSes, before any ESC/P rendering logic is built on top. Primary approach: `javax.print` `DocFlavor.BYTE_ARRAY.AUTOSENSE` against a queue configured OS-side as raw passthrough — a CUPS raw queue on Linux, a Generic/Text-Only driver on a RAW-datatype port on Windows. Build `RawPrintTransport` interface + `JavaxRawPrintTransport` impl, plus a throwaway manual harness (not part of the automated suite). Must fail loud (throw/log-and-abort) if the named queue isn't found — no fallback to system default. Only build a platform-specific fallback (e.g. JNA for WinSpool) if the primary approach fails byte-fidelity validation.
 **Acceptance criteria:**
-- [ ] A named raw queue can be located and an arbitrary `byte[]` (text + trailing form-feed byte) sent end-to-end on Linux with zero byte mangling (verify via captured `file://` CUPS backend output or raw device output) matching physical LX-300 printout
-- [ ] Same validated on Windows against a RAW-datatype/Generic-Text queue
-- [ ] Missing/misconfigured queue name produces a clear, actionable logged error — never a silent substitute printer
+- [ ] A named raw queue can be located and an arbitrary `byte[]` (text + trailing form-feed byte) sent end-to-end on Linux with zero byte mangling (verify via captured `file://` CUPS backend output or raw device output) matching physical LX-300 printout — **NOT DONE, see notes**
+- [ ] Same validated on Windows against a RAW-datatype/Generic-Text queue — **NOT DONE, see notes**
+- [x] Missing/misconfigured queue name produces a clear, actionable logged error — never a silent substitute printer
 **Verification:** Manual/hardware — not unit-testable. Where physical hardware isn't available, verify byte fidelity against a captured-bytes CUPS `file:` queue / Windows FILE: port, and flag physical-printer validation as a follow-up gate before Phase C ships.
 **Dependencies:** None.
 **Files:**
 - `src/main/java/id/modefashion/printer/transport/RawPrintTransport.java`
+- `src/main/java/id/modefashion/printer/transport/PrintServiceResolver.java`
+- `src/main/java/id/modefashion/printer/transport/SystemPrintServiceResolver.java`
 - `src/main/java/id/modefashion/printer/transport/JavaxRawPrintTransport.java`
 - `src/main/java/id/modefashion/printer/transport/RawPrintTransportManualHarness.java`
+- `src/main/java/id/modefashion/printer/transport/PrintTransportException.java`
+- `src/test/java/id/modefashion/printer/transport/JavaxRawPrintTransportTest.java`
 **Estimated scope:** S/M code; budget real time for physical/queue validation — this is the task most likely to surface a hard blocker.
+
+**Implementation notes:**
+- Built `JavaxRawPrintTransport` with a `PrintServiceResolver` seam (real impl: `SystemPrintServiceResolver`, matches exact queue name via `PrintServiceLookup`, deliberately does **not** fall back to the system default the way `Helper.findPrinterByName` does). This makes the fail-loud path and the byte-exact write path both genuinely unit-testable via a mocked `PrintServiceResolver`/`PrintService`/`DocPrintJob` — no live printer needed for that part. Three tests: queue-not-found throws (and never touches a `PrintService`), bytes handed to `job.print(...)` are byte-identical to the input, and a `PrintException` from the OS layer is wrapped (not swallowed).
+- **Real-queue byte-fidelity validation (Linux/Windows/physical LX-300) is explicitly NOT done and remains an open gate before Phase C ships**, per the plan's own fallback language above. Attempted the local-CUPS-as-Linux-proxy approach (this Mac's CUPS is the same stack Linux uses): bind a loopback `nc` listener, add a temporary `socket://127.0.0.1:19100` raw CUPS queue via `lpadmin`, send bytes through `RawPrintTransportManualHarness`, byte-compare. Blocked structurally, not by choice: the sandbox's `sudo` has no TTY to accept a password non-interactively, so `lpadmin` (which requires root) can't run here at all. No queue was actually created (the failed call errored out before creating anything — confirmed via `lpstat`). This was a deliberate, user-approved attempt (two separate permission grants: the loopback listener, then `sudo`), not a skipped step.
+- **Before this can be considered safe to ship**, someone needs to run `RawPrintTransportManualHarness <queueName>` against: (1) a real Linux box with a CUPS raw queue, (2) a real Windows box with a RAW-datatype/Generic-Text queue, (3) ideally the physical LX-300 itself — and confirm byte-for-byte fidelity each time (no line-ending translation, no injected headers).
 
 ### Task B1: Extend `ReceiptData` DTO
 **Description:** Add `private String printer;` and `private boolean formFeed;` to `dto/ReceiptData.java` (Lombok `@Data` generates accessors).

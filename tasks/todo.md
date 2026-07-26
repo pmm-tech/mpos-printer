@@ -4,9 +4,9 @@ See `tasks/plan.md` for full task details, acceptance criteria, and verification
 
 ## Phase A: Foundation & risk reduction
 - [x] A1: Test scaffolding (JUnit4/5 + Mockito) — XS
-- [ ] A2: Raw-queue transport spike (Windows + Linux) — S/M, highest risk, do early
+- [~] A2: Raw-queue transport spike — code+unit tests done; **hardware validation blocked (no Windows/Linux/physical LX-300 access from this sandbox — open gate before Phase C ships)**
 
-**Checkpoint:** `mvn test` runs with new stack; transport spike proves byte fidelity on both OSes (or fallback chosen)
+**Checkpoint:** `mvn test` runs with new stack (done); transport byte-fidelity on real OSes/hardware — **still open**
 
 ## Phase B: Message routing (backward compatible)
 - [ ] B1: Extend `ReceiptData` DTO with `printer`/`formFeed` — XS
