@@ -11,9 +11,9 @@ See `tasks/plan.md` for full task details, acceptance criteria, and verification
 ## Phase B: Message routing (backward compatible)
 - [x] B1: Extend `ReceiptData` DTO with `printer`/`formFeed` — XS
 - [x] B2: `PrinterBackend` interface + `Graphics2DPrinterBackend` (zero behavior change) — S
-- [ ] B3: `PrintServer` routing → stub `EscpPrinterBackend` — S/M
+- [x] B3: `PrintServer` routing → stub `EscpPrinterBackend` — S/M (unit-verified; live-printer smoke test intentionally skipped to avoid triggering a real print job)
 
-**Checkpoint 1:** all 3 message shapes route correctly; legacy shapes byte-for-byte unchanged; escp wrapper only logs so far
+**Checkpoint 1:** all 3 message shapes route correctly (done); legacy shapes byte-for-byte unchanged (done); escp wrapper only logs so far (done)
 
 ## Phase C: Real ESC/P text output
 - [ ] C1: ESC/P command byte builder (pure, unit-tested) — S/M

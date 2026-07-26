@@ -27,12 +27,12 @@
 
 - [x] Task B1: Extend `ReceiptData` DTO with `printer`/`formFeed`
 - [x] Task B2: `PrinterBackend` interface + `Graphics2DPrinterBackend` (zero behavior change)
-- [ ] Task B3: `PrintServer` routing → stub `EscpPrinterBackend`
+- [x] Task B3: `PrintServer` routing → stub `EscpPrinterBackend`
 
 ### Checkpoint 1: Routing
-- [ ] All three message shapes (bare array, `#`-string, new escp wrapper) route correctly
-- [ ] Legacy shapes produce byte-for-byte identical printed output to pre-change behavior
-- [ ] escp wrapper only logs so far — no printer touched yet
+- [x] All three message shapes (bare array, `#`-string, new escp wrapper) route correctly (unit-verified via `JobRouterTest`)
+- [~] Legacy shapes produce byte-for-byte identical printed output to pre-change behavior — logic unchanged/unit-verified; live physical-printer smoke test intentionally skipped (see B3 notes)
+- [x] escp wrapper only logs so far — no printer touched yet
 
 ### Phase C: Real ESC/P text output
 
@@ -135,12 +135,12 @@
 - `PrinterBackend` has one method: `print(List<ReceiptLineData> data, boolean formFeed)`. `formFeed` is part of the shared interface for symmetry with the upcoming `EscpPrinterBackend` (which cares about it); `Graphics2DPrinterBackend` just ignores it, which is correct (no continuous-form concept on that path).
 - The legacy `#`-delimited string case is **not** on the `PrinterBackend` interface at all — it only ever goes to Graphics2D (no ESC/P equivalent exists or is planned), so `Graphics2DPrinterBackend` exposes it as a separate concrete method `printLegacyString(String)`, called directly by `JobRouter` (B3) rather than through polymorphic dispatch.
 
-### Task B3: `PrintServer` routing → stub `EscpPrinterBackend`
+### Task B3: `PrintServer` routing → stub `EscpPrinterBackend` — DONE (unit-verified; live-WebSocket leg deliberately skipped, see notes)
 **Description:** Extract dispatch out of `PrintServer.onMessage` into a testable `JobRouter`. Routing order: (1) message starts with `{` and contains `"printer"` → parse as `ReceiptData` wrapper; `printer == "escp"` (case-insensitive) → `EscpPrinterBackend` (stub: logs job line count + `formFeed`, does not print); wrapper without/other `printer` → `Graphics2DPrinterBackend` with wrapper's data. (2) Else existing `message.contains("type")` check, byte-for-byte preserved → bare array → Graphics2D. (3) Else `#`-delimited string → Graphics2D. `PrintServer.onMessage` becomes a thin call into `JobRouter.route(message, config)`.
 **Acceptance criteria:**
-- [ ] `JobRouterTest` (unit, no live WebSocket) asserts all four routing branches
-- [ ] Live WebSocket: pre-existing bare-array and `#`-string messages produce identical printed output to pre-change behavior
-- [ ] Live WebSocket: new escp wrapper message produces a stub log line, no print attempt/error
+- [x] `JobRouterTest` (unit, no live WebSocket) asserts all four routing branches (plus case-insensitivity and the "other printer value" case — 7 tests total)
+- [ ] Live WebSocket: pre-existing bare-array and `#`-string messages produce identical printed output to pre-change behavior — **not run, see notes**
+- [ ] Live WebSocket: new escp wrapper message produces a stub log line, no print attempt/error — **not run, see notes**
 **Verification:** Unit test (`JobRouterTest`); manual WebSocket client message + log inspection for live end-to-end + regression check.
 **Dependencies:** B1, B2.
 **Files:**
@@ -149,6 +149,11 @@
 - `src/main/java/id/modefashion/printer/backend/EscpPrinterBackend.java` (stub)
 - `src/test/java/id/modefashion/printer/backend/JobRouterTest.java`
 **Estimated scope:** S/M (4 files).
+
+**Implementation notes:**
+- Wrapper-shape detection ended up simpler than the plan's literal wording: `trimmed.startsWith("{")` alone is the discriminator, **not** also requiring the substring `"printer"`. Reasoning: the legacy bare-array format is always a top-level `[`, and the legacy `#`-string format is never JSON, so no existing caller can produce a top-level `{` message today — checking for `{` alone unambiguously identifies the new wrapper shape, including the "wrapper without a printer field" case the plan itself calls out (which a `contains("\"printer\"")` check would have missed entirely, since that field would be absent by definition).
+- Branch 2's discriminator (`message.contains("type")`) is untouched byte-for-byte from the original `PrintServer.onMessage`, including its known fragility (any non-`{` message that happens to contain the substring "type" is treated as JSON) — that's pre-existing behavior, not introduced or fixed here.
+- **Live-WebSocket regression/smoke verification was deliberately not run.** This machine's `printer.properties` points at a real, currently-configured `EPSON_L3250_Series` CUPS printer — actually starting `PrintServer` and sending a legacy message would risk triggering a real physical print job as a side effect of verification, which felt like the wrong tradeoff for a routing-logic check that unit tests already cover thoroughly (7 tests across all branches, including asserting the escp branch never touches the Graphics2D mock and vice versa). If you want this leg closed, run the app and send a bare-array and a `#`-string message manually.
 
 ### Task C1: ESC/P command byte builder
 **Description:** Pure class turning text-only `List<ReceiptLineData>` (`TYPE_TXT`) plus pitch/line-spacing settings into a `byte[]` ESC/P stream: init (`ESC @` = `0x1B 0x40`), pitch/CPI, line spacing, each line's bytes + `CR LF` (`0x0D 0x0A`), and a parameterized (unused until D1) trailing form-feed (`0x0C`). `TYPE_IMG`/`TYPE_BARCODE` lines are skipped with a logged warning, not silently dropped.
