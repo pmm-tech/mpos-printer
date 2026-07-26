@@ -15,8 +15,10 @@ import id.modefashion.printer.transport.RawPrintTransport;
 
 /**
  * Renders text-only ESC/P output and writes it straight to a raw OS print
- * queue - no Graphics2D, no Paper/page-height math. formFeed is not yet
- * wired through (hardcoded false at the builder call site) - see task D1.
+ * queue - no Graphics2D, no Paper/page-height math. formFeed is passed
+ * through as-is: the caller decides whether this job ends the physical
+ * form (once per document for multi-part forms) or continues the stream
+ * (journal jobs never set it).
  */
 public class EscpPrinterBackend implements PrinterBackend {
 
@@ -44,7 +46,7 @@ public class EscpPrinterBackend implements PrinterBackend {
 
   @Override
   public void print(List<ReceiptLineData> data, boolean formFeed) {
-    byte[] bytes = commandBuilder.build(data, false); // formFeed wired in D1
+    byte[] bytes = commandBuilder.build(data, formFeed);
     try {
       transport.write(bytes);
       logger.info("ESC/P job printed: {} line(s) -> queue '{}'",

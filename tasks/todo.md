@@ -23,9 +23,9 @@ See `tasks/plan.md` for full task details, acceptance criteria, and verification
 **Checkpoint 2 (core value delivery):** code path unit-verified end-to-end (done); real ESC/P job printing correctly on physical LX-300, both OSes — **still open, same blocker as A2**
 
 ## Phase D: Form-feed control
-- [ ] D1: Wire real `formFeed` flag end-to-end — XS/S
+- [x] D1: Wire real `formFeed` flag end-to-end — XS/S (unit-verified; physical validation blocked, same as A2)
 
-**Checkpoint 3:** multi-part-form (feed per doc) and journal (never) jobs both physically validated
+**Checkpoint 3:** multi-part-form (feed per doc) and journal (never) jobs both logic-verified (done); physical LX-300 validation — **still open, same blocker as A2**
 
 ## Phase E: Durability / retry queue
 - [ ] E1: In-memory bounded queue + background consumer — S/M

@@ -45,10 +45,10 @@
 
 ### Phase D: Form-feed control
 
-- [ ] Task D1: Wire the real `formFeed` flag end-to-end
+- [~] Task D1: Wire the real `formFeed` flag end-to-end — unit-verified; physical validation blocked, same as A2
 
 ### Checkpoint 3: Continuous-form model validated
-- [ ] Multi-part-form jobs (form-feed per document) and journal jobs (never) both physically validated
+- [~] Multi-part-form jobs (form-feed per document) and journal jobs (never) both physically validated — **logic unit-verified (byte-level + wiring); physical LX-300 observation still open, same gate as A2**
 
 ### Phase E: Durability / retry queue
 
@@ -211,18 +211,21 @@
 - `PrintServer` now constructs `new EscpPrinterBackend(config)` instead of B3's no-arg stub.
 - Real-printer end-to-end verification is the same open gate as A2 — no new attempt was made here since the blocker (no Windows/Linux/physical hardware access, no sudo TTY) is identical and already tracked there.
 
-### Task D1: Wire the real `formFeed` flag
+### Task D1: Wire the real `formFeed` flag — DONE (unit-verified; physical form-advance observation blocked, same as A2)
 **Description:** Flip the hardcoded `false` from C3 to the actual `ReceiptData.formFeed` value parsed by `JobRouter`.
 **Acceptance criteria:**
-- [ ] Unit test: `formFeed=true` job's bytes end with `0x0C`; `formFeed=false` job's bytes contain no `0x0C`
-- [ ] Two consecutive real jobs (`formFeed=false` then `formFeed=true`) produce continuous output for the first and a physical form advance only after the second
+- [x] Unit test: `formFeed=true` job's bytes end with `0x0C`; `formFeed=false` job's bytes contain no `0x0C` (already covered by C1's `EscpCommandBuilderTest.formFeedByteAppendedOnlyWhenRequested`, at the builder level)
+- [ ] Two consecutive real jobs (`formFeed=false` then `formFeed=true`) produce continuous output for the first and a physical form advance only after the second — **NOT DONE, same blocker as A2 (no physical LX-300)**
 **Verification:** `EscpCommandBuilderTest` additions; manual two-job WebSocket sequence + physical observation.
 **Dependencies:** C1, C3.
 **Files:**
-- `src/main/java/id/modefashion/printer/escp/EscpCommandBuilder.java`
 - `src/main/java/id/modefashion/printer/backend/EscpPrinterBackend.java`
-- `src/test/java/id/modefashion/printer/escp/EscpCommandBuilderTest.java`
+- `src/test/java/id/modefashion/printer/backend/EscpPrinterBackendTest.java`
 **Estimated scope:** XS/S (3 files).
+
+**Implementation notes:**
+- One-line change: `commandBuilder.build(data, false)` → `commandBuilder.build(data, formFeed)`. Byte-level form-feed correctness was already covered by C1's `EscpCommandBuilderTest`; this task's own test (`EscpPrinterBackendTest.formFeedFlagIsPassedThroughToCommandBuilder`) proves the *wiring* — that the flag `JobRouter` parsed off `ReceiptData` actually reaches the builder call, not just that the builder itself handles the flag correctly in isolation. Also renamed/simplified the C3-era `..._formFeedNotWiredYet` test now that it is wired.
+- Physical form-advance timing observation (two real jobs, one plain one form-feeding) needs a real LX-300 and is out of reach here — tracked as the same open gate as A2/C3.
 
 ### Task E1: In-memory bounded queue + background consumer
 **Description:** `EscpJobQueue` — bounded queue (e.g. `ArrayBlockingQueue<EscpJob>`, capacity from `escp.queue.capacity`) + single background consumer calling `EscpPrinterBackend`. The escp path now enqueues instead of printing synchronously. No retry yet — a failure just logs and moves on. Explicitly not disk-backed: a process restart loses queued-but-unprinted jobs (accepted tradeoff).
