@@ -172,12 +172,12 @@
 - Constructor takes primitives (`pitchCpi`, `lineSpacingUnits`), not an `EscpConfig` object — keeps C1 independent of C2 per the dependency graph; C3 wires the two together.
 - Also included a `formFeed` byte-presence/absence test at the builder level here (not just in D1) since it's basic correctness of the builder itself, independent of whether any caller wires the real flag through yet.
 
-### Task C2: `escp.*` config keys + `EscpConfig` accessor
+### Task C2: `escp.*` config keys + `EscpConfig` accessor — DONE
 **Description:** Add a documented `escp.*` section to `printer.properties` (same file, same `PropertiesConfiguration` object): at minimum `escp.printer.name`, `escp.pitch`/`escp.cpi`, `escp.line.spacing`. `EscpConfig` wraps reads with sane defaults so tests can construct an in-memory `PropertiesConfiguration` without touching the real file.
 **Acceptance criteria:**
-- [ ] `printer.properties` gains a commented `escp.*` section
-- [ ] `EscpConfigTest` confirms correct reads and defaults when a key is missing
-- [ ] `PrinterGuiApp`'s existing config load/save still works unchanged with the new keys present
+- [x] `printer.properties` gains a commented `escp.*` section
+- [x] `EscpConfigTest` confirms correct reads and defaults when a key is missing
+- [x] `PrinterGuiApp`'s existing config load/save still works unchanged with the new keys present
 **Verification:** Unit test (`EscpConfigTest`); manual — launch `PrinterGuiApp`, open "Edit printer.properties", Save, confirm `escp.*` keys survive the round-trip.
 **Dependencies:** A2.
 **Files:**
@@ -185,6 +185,11 @@
 - `src/main/java/id/modefashion/printer/escp/EscpConfig.java`
 - `src/test/java/id/modefashion/printer/escp/EscpConfigTest.java`
 **Estimated scope:** XS/S (3 files).
+
+**Implementation notes:**
+- `escp.line.spacing` default is `30` (30/180" = 1/6", the standard 6 LPI default) — matches conventional receipt/journal line spacing.
+- `escp.printer.name` defaults to empty string, not a placeholder value — `EscpPrinterBackend` (C3) must treat blank the same as "not configured" and fail loud rather than attempt a lookup for `""`.
+- Verified the GUI round-trip **without launching the actual Swing app** (no interactive display session in this environment): wrote a throwaway harness that loads a scratch copy of `printer.properties` into `PropertiesConfiguration`, calls `setProperty` only on the keys `PrinterGuiApp.showConfigDialog()` actually touches (`printer.port`, `printer.name`), then `.save()` — exactly what the GUI's Save button does — then reloads and confirms `escp.*` keys and values survived. They did. The real `printer.properties` was never touched by this check (operated on a copy in the scratch dir).
 
 ### Task C3: Wire `EscpPrinterBackend` to real bytes + transport
 **Description:** Replace the B3 stub body: builds bytes via `EscpCommandBuilder` (with `formFeed` still hardcoded `false`), resolves the raw queue via `JavaxRawPrintTransport`/`EscpConfig`, writes the bytes, logs success or a loud error on failure (no retry queue yet).

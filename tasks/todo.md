@@ -17,7 +17,7 @@ See `tasks/plan.md` for full task details, acceptance criteria, and verification
 
 ## Phase C: Real ESC/P text output
 - [x] C1: ESC/P command byte builder (pure, unit-tested) — S/M
-- [ ] C2: `escp.*` config keys + `EscpConfig` accessor — XS/S
+- [x] C2: `escp.*` config keys + `EscpConfig` accessor — XS/S
 - [ ] C3: Wire `EscpPrinterBackend` to real bytes + transport — S/M
 
 **Checkpoint 2 (core value delivery):** real ESC/P job over WebSocket prints correctly on LX-300, both OSes, synchronously
