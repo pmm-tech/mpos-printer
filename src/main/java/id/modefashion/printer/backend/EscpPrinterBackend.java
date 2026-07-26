@@ -20,7 +20,7 @@ import id.modefashion.printer.transport.RawPrintTransport;
  * form (once per document for multi-part forms) or continues the stream
  * (journal jobs never set it).
  */
-public class EscpPrinterBackend implements PrinterBackend {
+public class EscpPrinterBackend implements PrinterBackend, EscpPrintAttempt {
 
   private static final Logger logger = LoggerFactory.getLogger(EscpPrinterBackend.class);
 
@@ -46,13 +46,20 @@ public class EscpPrinterBackend implements PrinterBackend {
 
   @Override
   public void print(List<ReceiptLineData> data, boolean formFeed) {
+    tryPrint(data, formFeed);
+  }
+
+  @Override
+  public boolean tryPrint(List<ReceiptLineData> data, boolean formFeed) {
     byte[] bytes = commandBuilder.build(data, formFeed);
     try {
       transport.write(bytes);
       logger.info("ESC/P job printed: {} line(s) -> queue '{}'",
           data == null ? 0 : data.size(), escpConfig.printerName());
+      return true;
     } catch (PrintTransportException e) {
       logger.error("ESC/P print failed for queue '{}': {}", escpConfig.printerName(), e.getMessage(), e);
+      return false;
     }
   }
 }

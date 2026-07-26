@@ -29,9 +29,9 @@ See `tasks/plan.md` for full task details, acceptance criteria, and verification
 
 ## Phase E: Durability / retry queue
 - [x] E1: In-memory bounded queue + background consumer — S/M (JobRouter untouched; EscpJobQueue decorates EscpPrinterBackend instead)
-- [ ] E2: Retry + backoff + cap + loud alert logging — S/M
+- [x] E2: Retry + backoff + cap + loud alert logging — S/M (unit-verified; physical drill blocked, same as A2)
 
-**Checkpoint 4:** printer-offline scenario fails loudly, not silently; no disk persistence added
+**Checkpoint 4:** printer-offline scenario fails loudly, not silently (unit-verified); no disk persistence added (done by design); physical offline/reconnect drill — **still open, same blocker as A2**
 
 ## Phase F: Polish (optional, non-gating)
 - [ ] F1: Sample config + deployment notes — XS

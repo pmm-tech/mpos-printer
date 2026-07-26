@@ -14,6 +14,8 @@ public class EscpConfigTest {
     props.setProperty("escp.pitch", "12");
     props.setProperty("escp.line.spacing", "24");
     props.setProperty("escp.queue.capacity", "50");
+    props.setProperty("escp.retry.max.attempts", "5");
+    props.setProperty("escp.retry.backoff.ms", "2000");
 
     EscpConfig config = new EscpConfig(props);
 
@@ -21,6 +23,8 @@ public class EscpConfigTest {
     assertEquals(12, config.pitchCpi());
     assertEquals(24, config.lineSpacingUnits());
     assertEquals(50, config.queueCapacity());
+    assertEquals(5, config.retryMaxAttempts());
+    assertEquals(2000, config.retryBackoffMillis());
   }
 
   @Test
@@ -33,5 +37,7 @@ public class EscpConfigTest {
     assertEquals(10, config.pitchCpi());
     assertEquals(30, config.lineSpacingUnits());
     assertEquals(100, config.queueCapacity());
+    assertEquals(3, config.retryMaxAttempts());
+    assertEquals(1000, config.retryBackoffMillis());
   }
 }

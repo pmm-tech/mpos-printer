@@ -53,10 +53,10 @@
 ### Phase E: Durability / retry queue
 
 - [x] Task E1: In-memory bounded queue + background consumer (happy path)
-- [ ] Task E2: Retry + backoff + cap + loud alert logging
+- [~] Task E2: Retry + backoff + cap + loud alert logging — unit-verified; physical offline/reconnect drill blocked, same as A2
 
 ### Checkpoint 4: Reliability
-- [ ] Printer-offline scenario fails loudly, not silently, without becoming a disk-persistence project
+- [~] Printer-offline scenario fails loudly, not silently, without becoming a disk-persistence project — **retry/alert/recovery logic unit-verified (see E2); physical offline/reconnect drill on a real LX-300 remains open, same blocker as A2**
 
 ### Phase F: Polish (optional, non-gating)
 
@@ -253,15 +253,26 @@
 ### Task E2: Retry + backoff + cap + loud alert
 **Description:** Consumer catches write failures, retries with configurable backoff/cap, tracks "printer down since" state, emits a distinctly-taggable `ALERT` log line when the cap or a down-duration threshold is hit. Overflow policy (reject-new / drop-oldest / hold-indefinitely) is config-driven (`escp.queue.overflow.policy`), not hardcoded — default value needs human sign-off (open question).
 **Acceptance criteria:**
-- [ ] `EscpJobQueueRetryTest`: scripted-failure fake transport triggers retries per policy, then the cap/alert log line, then recovers once the fake transport succeeds
-- [ ] Manual: physically disconnect/misconfigure the LX-300, send jobs, observe retry logs + alert trigger; reconnect, observe backlog drains
+- [x] `EscpJobQueueRetryTest`: scripted-failure fake transport triggers retries per policy, then the cap/alert log line, then recovers once the fake transport succeeds
+- [ ] Manual: physically disconnect/misconfigure the LX-300, send jobs, observe retry logs + alert trigger; reconnect, observe backlog drains — **NOT DONE, same blocker as A2 (no physical LX-300)**
 **Verification:** Unit test with scripted-failure fake transport; manual offline/reconnect drill.
 **Dependencies:** E1.
 **Files:**
 - `src/main/java/id/modefashion/printer/backend/EscpJobQueue.java` (extended)
 - `src/main/java/id/modefashion/printer/backend/RetryPolicy.java`
+- `src/main/java/id/modefashion/printer/backend/EscpPrintAttempt.java` (new — see notes)
+- `src/main/java/id/modefashion/printer/backend/EscpPrinterBackend.java` (implements the new interface)
+- `src/main/java/id/modefashion/printer/escp/EscpConfig.java` (new `retryMaxAttempts()`/`retryBackoffMillis()`)
+- `printer.properties` (new `escp.retry.*` keys)
 - `src/test/java/id/modefashion/printer/backend/EscpJobQueueRetryTest.java`
+- `src/test/java/id/modefashion/printer/backend/EscpJobQueueTest.java` (updated for new constructor/delegate type)
 **Estimated scope:** S/M (3 files) — keep separate from E1, don't bundle.
+
+**Implementation notes:**
+- **New seam required and not anticipated by the plan**: `EscpPrinterBackend.print()` (the `PrinterBackend` interface method) swallows `PrintTransportException` and returns `void` — the consumer had no way to know if a print actually succeeded, which retry logic needs. Added `EscpPrintAttempt` (`boolean tryPrint(data, formFeed)`); `EscpPrinterBackend` now implements both interfaces, with `print()` just forwarding to `tryPrint()` and discarding the result (existing `EscpPrinterBackendTest` assertions unaffected). `EscpJobQueue`'s delegate type changed from `PrinterBackend` to `EscpPrintAttempt` accordingly — a legitimate, expected change to an "extended" E1 file, not scope creep.
+- **Retry keeps retrying the same job in place** (the single consumer thread blocks/backs off), rather than moving to the next job and coming back — a receipt/journal line shouldn't silently lose its place in line. After `retryMaxAttempts` (default 3, fixed `retryBackoffMillis` interval, default 1000ms — not exponential, kept simple for MVP) all fail, the job is dropped and a single `[ALERT]`-tagged `ERROR` log line fires (not one per attempt) with the down-duration and a running `retryExhaustedCount()`. The *next* job to succeed logs `[ALERT] ... recovered after N ms down` and clears the down-since state. Verified directly in test log output: 3 failed attempts → `[ALERT] ... dropped` → next job succeeds → `[ALERT] ... recovered`.
+- **Deliberately out of scope**: `escp.queue.overflow.policy` (what happens when the *queue itself* is full, as opposed to the printer failing) is explicitly mentioned in this task's description but its acceptance criteria don't actually test it — E1's behavior (reject-new via `queue.offer()`, logged, counted) is unchanged. Making this config-driven (especially a "hold-indefinitely" option, which risks blocking the WebSocket handler thread) is left as the open question the plan already carries forward, not silently resolved here.
+- Physical offline/reconnect drill against a real LX-300 remains the same blocked gate as A2/C3/D1.
 
 ### Task F1: Sample config + deployment notes
 **Description:** Finalize `escp.*` property comments; add a short deployment note capturing the OS-specific raw-queue setup validated in A2, so ops can reproduce it on new machines.

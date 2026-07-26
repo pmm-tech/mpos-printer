@@ -30,7 +30,7 @@ public class EscpJobQueueTest {
   @Test
   public void drainsJobsInOrderToDelegateBackend() throws InterruptedException {
     RecordingBackend delegate = new RecordingBackend();
-    queue = new EscpJobQueue(delegate, 10);
+    queue = new EscpJobQueue(delegate, 10, new RetryPolicy(1, 0));
     queue.start();
 
     queue.print(lineOf("a"), false);
@@ -49,7 +49,7 @@ public class EscpJobQueueTest {
   @Test
   public void dropsAndCountsJobsWhenFullAndNotDraining() {
     RecordingBackend delegate = new RecordingBackend();
-    queue = new EscpJobQueue(delegate, 2); // capacity 2, consumer deliberately not started
+    queue = new EscpJobQueue(delegate, 2, new RetryPolicy(1, 0)); // capacity 2, consumer deliberately not started
 
     queue.print(lineOf("1"), false);
     queue.print(lineOf("2"), false);
@@ -81,12 +81,13 @@ public class EscpJobQueueTest {
     }
   }
 
-  private static final class RecordingBackend implements PrinterBackend {
+  private static final class RecordingBackend implements EscpPrintAttempt {
     final List<RecordedCall> received = Collections.synchronizedList(new ArrayList<>());
 
     @Override
-    public void print(List<ReceiptLineData> data, boolean formFeed) {
+    public boolean tryPrint(List<ReceiptLineData> data, boolean formFeed) {
       received.add(new RecordedCall(data, formFeed));
+      return true;
     }
   }
 }
