@@ -16,7 +16,7 @@ See `tasks/plan.md` for full task details, acceptance criteria, and verification
 **Checkpoint 1:** all 3 message shapes route correctly (done); legacy shapes byte-for-byte unchanged (done); escp wrapper only logs so far (done)
 
 ## Phase C: Real ESC/P text output
-- [ ] C1: ESC/P command byte builder (pure, unit-tested) — S/M
+- [x] C1: ESC/P command byte builder (pure, unit-tested) — S/M
 - [ ] C2: `escp.*` config keys + `EscpConfig` accessor — XS/S
 - [ ] C3: Wire `EscpPrinterBackend` to real bytes + transport — S/M
 

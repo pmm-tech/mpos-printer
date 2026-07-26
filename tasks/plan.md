@@ -155,17 +155,22 @@
 - Branch 2's discriminator (`message.contains("type")`) is untouched byte-for-byte from the original `PrintServer.onMessage`, including its known fragility (any non-`{` message that happens to contain the substring "type" is treated as JSON) — that's pre-existing behavior, not introduced or fixed here.
 - **Live-WebSocket regression/smoke verification was deliberately not run.** This machine's `printer.properties` points at a real, currently-configured `EPSON_L3250_Series` CUPS printer — actually starting `PrintServer` and sending a legacy message would risk triggering a real physical print job as a side effect of verification, which felt like the wrong tradeoff for a routing-logic check that unit tests already cover thoroughly (7 tests across all branches, including asserting the escp branch never touches the Graphics2D mock and vice versa). If you want this leg closed, run the app and send a bare-array and a `#`-string message manually.
 
-### Task C1: ESC/P command byte builder
+### Task C1: ESC/P command byte builder — DONE
 **Description:** Pure class turning text-only `List<ReceiptLineData>` (`TYPE_TXT`) plus pitch/line-spacing settings into a `byte[]` ESC/P stream: init (`ESC @` = `0x1B 0x40`), pitch/CPI, line spacing, each line's bytes + `CR LF` (`0x0D 0x0A`), and a parameterized (unused until D1) trailing form-feed (`0x0C`). `TYPE_IMG`/`TYPE_BARCODE` lines are skipped with a logged warning, not silently dropped.
 **Acceptance criteria:**
-- [ ] Unit tests assert exact byte sequences for init, pitch, line-spacing, and CR/LF line termination, citing the ESC/P spec byte values in test comments
-- [ ] An `img/png` or `barcode` line is skipped with a logged warning rather than crashing the job
+- [x] Unit tests assert exact byte sequences for init, pitch, line-spacing, and CR/LF line termination, citing the ESC/P spec byte values in test comments
+- [x] An `img/png` or `barcode` line is skipped with a logged warning rather than crashing the job
 **Verification:** `mvn test` — `EscpCommandBuilderTest` with byte-array equality assertions.
 **Dependencies:** A1.
 **Files:**
 - `src/main/java/id/modefashion/printer/escp/EscpCommandBuilder.java`
 - `src/test/java/id/modefashion/printer/escp/EscpCommandBuilderTest.java`
 **Estimated scope:** S/M (2 files).
+
+**Implementation notes:**
+- Line spacing uses `ESC 3 n` (0x1B 0x33 n, "set n/180-inch line spacing") rather than the discrete `ESC 0`/`ESC 2` presets, so the config value maps directly to a single byte parameter instead of needing a lookup table.
+- Constructor takes primitives (`pitchCpi`, `lineSpacingUnits`), not an `EscpConfig` object — keeps C1 independent of C2 per the dependency graph; C3 wires the two together.
+- Also included a `formFeed` byte-presence/absence test at the builder level here (not just in D1) since it's basic correctness of the builder itself, independent of whether any caller wires the real flag through yet.
 
 ### Task C2: `escp.*` config keys + `EscpConfig` accessor
 **Description:** Add a documented `escp.*` section to `printer.properties` (same file, same `PropertiesConfiguration` object): at minimum `escp.printer.name`, `escp.pitch`/`escp.cpi`, `escp.line.spacing`. `EscpConfig` wraps reads with sane defaults so tests can construct an in-memory `PropertiesConfiguration` without touching the real file.
