@@ -26,7 +26,7 @@
 ### Phase B: Message routing (backward compatible)
 
 - [x] Task B1: Extend `ReceiptData` DTO with `printer`/`formFeed`
-- [ ] Task B2: `PrinterBackend` interface + `Graphics2DPrinterBackend` (zero behavior change)
+- [x] Task B2: `PrinterBackend` interface + `Graphics2DPrinterBackend` (zero behavior change)
 - [ ] Task B3: `PrintServer` routing → stub `EscpPrinterBackend`
 
 ### Checkpoint 1: Routing
@@ -119,17 +119,21 @@
 - `src/test/java/id/modefashion/printer/dto/ReceiptDataTest.java`
 **Estimated scope:** XS (2 files).
 
-### Task B2: `PrinterBackend` interface + `Graphics2DPrinterBackend`
+### Task B2: `PrinterBackend` interface + `Graphics2DPrinterBackend` — DONE
 **Description:** Introduce a minimal `PrinterBackend` interface. `Graphics2DPrinterBackend` wraps today's two entry points unchanged: delegates to `new ReceiptWorker(data, config).proceed()` and `new ReceiptWorkerString(dataString, config).proceed()`, with zero changes to `ReceiptWorker`, `ReceiptWorkerString`, `PosReceipt`, `PosReceiptString`, or `ReceiptPaper`.
 **Acceptance criteria:**
-- [ ] `Graphics2DPrinterBackend` compiles and calls through to existing workers with identical arguments/order
-- [ ] No changes to any file under `worker/` or `paper/`
+- [x] `Graphics2DPrinterBackend` compiles and calls through to existing workers with identical arguments/order
+- [x] No changes to any file under `worker/` or `paper/` (verified via `git status`)
 **Verification:** Manual smoke test — send a pre-existing bare-array message and a pre-existing `#`-delimited message through the new wrapper and confirm identical printed output to before the change.
 **Dependencies:** None.
 **Files:**
 - `src/main/java/id/modefashion/printer/backend/PrinterBackend.java`
 - `src/main/java/id/modefashion/printer/backend/Graphics2DPrinterBackend.java`
 **Estimated scope:** S (2 files).
+
+**Implementation notes:**
+- `PrinterBackend` has one method: `print(List<ReceiptLineData> data, boolean formFeed)`. `formFeed` is part of the shared interface for symmetry with the upcoming `EscpPrinterBackend` (which cares about it); `Graphics2DPrinterBackend` just ignores it, which is correct (no continuous-form concept on that path).
+- The legacy `#`-delimited string case is **not** on the `PrinterBackend` interface at all — it only ever goes to Graphics2D (no ESC/P equivalent exists or is planned), so `Graphics2DPrinterBackend` exposes it as a separate concrete method `printLegacyString(String)`, called directly by `JobRouter` (B3) rather than through polymorphic dispatch.
 
 ### Task B3: `PrintServer` routing → stub `EscpPrinterBackend`
 **Description:** Extract dispatch out of `PrintServer.onMessage` into a testable `JobRouter`. Routing order: (1) message starts with `{` and contains `"printer"` → parse as `ReceiptData` wrapper; `printer == "escp"` (case-insensitive) → `EscpPrinterBackend` (stub: logs job line count + `formFeed`, does not print); wrapper without/other `printer` → `Graphics2DPrinterBackend` with wrapper's data. (2) Else existing `message.contains("type")` check, byte-for-byte preserved → bare array → Graphics2D. (3) Else `#`-delimited string → Graphics2D. `PrintServer.onMessage` becomes a thin call into `JobRouter.route(message, config)`.
