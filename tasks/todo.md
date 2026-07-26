@@ -34,9 +34,9 @@ See `tasks/plan.md` for full task details, acceptance criteria, and verification
 **Checkpoint 4:** printer-offline scenario fails loudly, not silently (unit-verified); no disk persistence added (done by design); physical offline/reconnect drill — **still open, same blocker as A2**
 
 ## Phase F: Polish (optional, non-gating)
-- [ ] F1: Sample config + deployment notes — XS
+- [x] F1: Sample config + deployment notes — XS (written as an explicitly-flagged unvalidated guide, since A2 never completed real-queue validation)
 
-**Final checkpoint:** all acceptance criteria met across A–E; ready for review
+**Final checkpoint:** all unit-testable acceptance criteria met (30/30 tests passing, full build green); real-OS/hardware validation (A2/C3/D1/E2) remains one open gate — ready for review, not yet ready to ship to a real LX-300 without that validation
 
 ---
 

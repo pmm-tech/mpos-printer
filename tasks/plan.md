@@ -60,10 +60,10 @@
 
 ### Phase F: Polish (optional, non-gating)
 
-- [ ] Task F1: Sample config + deployment notes
+- [x] Task F1: Sample config + deployment notes (written as an explicitly-flagged unvalidated guide)
 
 ### Checkpoint: Complete
-- [ ] All acceptance criteria met across A–E
+- [~] All acceptance criteria met across A–E — **everything unit-testable from this sandbox is done and verified (30/30 tests passing, full build green); every task's real-OS/real-hardware validation leg (A2, C3, D1, E2) remains the same single open gate: no Windows/Linux/physical-LX-300 access, no sudo TTY here. See each task's notes for exactly what was and wasn't verified.**
 - [ ] Ready for review
 
 ## Task Details
@@ -274,16 +274,20 @@
 - **Deliberately out of scope**: `escp.queue.overflow.policy` (what happens when the *queue itself* is full, as opposed to the printer failing) is explicitly mentioned in this task's description but its acceptance criteria don't actually test it — E1's behavior (reject-new via `queue.offer()`, logged, counted) is unchanged. Making this config-driven (especially a "hold-indefinitely" option, which risks blocking the WebSocket handler thread) is left as the open question the plan already carries forward, not silently resolved here.
 - Physical offline/reconnect drill against a real LX-300 remains the same blocked gate as A2/C3/D1.
 
-### Task F1: Sample config + deployment notes
+### Task F1: Sample config + deployment notes — DONE (as an honestly-flagged unvalidated guide, since A2 never validated)
 **Description:** Finalize `escp.*` property comments; add a short deployment note capturing the OS-specific raw-queue setup validated in A2, so ops can reproduce it on new machines.
 **Acceptance criteria:**
-- [ ] Deployment note walks through creating the raw queue on both Windows and Linux, referencing exact commands/settings validated in A2
-**Verification:** Manual — follow the doc on a clean machine, confirm a working `escp.printer.name` queue results.
+- [x] Deployment note walks through creating the raw queue on both Windows and Linux — **but cannot "reference exact commands/settings validated in A2" as originally worded, because A2 never completed real-queue validation. Written instead as a standard/well-documented CUPS-raw-queue and Windows-RAW-port procedure, explicitly marked UNVALIDATED at the top, cross-referencing the still-open A2 gate.**
+**Verification:** Manual — follow the doc on a clean machine, confirm a working `escp.printer.name` queue results. **Not run — same reasoning as above.**
 **Dependencies:** C2, A2.
 **Files:**
-- `printer.properties`
-- `README.md` or `docs/escp-deployment.md`
+- `printer.properties` (comments already finalized incrementally across C2/E1/E2 — confirmed complete, no changes needed here)
+- `docs/escp-deployment.md`
 **Estimated scope:** XS (1-2 files).
+
+**Implementation notes:**
+- `printer.properties`'s `escp.*` section comments were already written well during C2/E1/E2 (each key documented at the point it was introduced) — re-read them for this task and found nothing to add.
+- `docs/escp-deployment.md` is written as a starting point for whoever eventually does the real validation, not as confirmed instructions — it says so explicitly at the top, and repeats the open-items list from A2/C3/D1/E2 so it's the one place a future reader can see what's still unverified before trusting this in production.
 
 ## Risks and Mitigations
 
