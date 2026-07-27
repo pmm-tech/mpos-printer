@@ -73,7 +73,7 @@
 ### Checkpoint G
 - [x] Dialog shows all 6 `EscpConfig` keys, pre-populated from `printer.properties`
 - [x] Save persists all 6 keys, matching existing dialog behavior
-- [x] Verified via a real GUI launch (this machine has an active console session with a display) — confirmed by user (and.thau@gmail.com) after manual launch, form shows updated correctly
+- [x] Verified via a real GUI launch (this machine has an active console session with a display) — confirmed by the user after manual launch, form shows updated correctly
 
 ## Task Details
 
@@ -304,7 +304,7 @@
 - [x] All 6 `escp.*` keys have a labeled field in the dialog, pre-populated with current config values
 - [x] Save writes all 6 fields back via `config.setProperty(...)` before `config.save()`, alongside the existing 13
 - [x] Dialog still opens/renders/scrolls correctly with 19 total fields (already wrapped in `JScrollPane` — no layout rework expected)
-**Verification:** `mvn clean package` — build green. Code review confirmed all 6 `escp.*` key names match `EscpConfig.java` exactly and all 6 exist in `printer.properties` with sane defaults. Manual verification via a real GUI launch was attempted via AppleScript/System Events automation but abandoned as unreliable and risky (the app's menu bar is embedded in the window rather than exposed as a normal accessibility menu bar; coordinate-based clicking briefly surfaced an unrelated app window on the live desktop). User (and.thau@gmail.com) then launched the app manually and confirmed the dialog shows all 6 fields correctly, pre-populated.
+**Verification:** `mvn clean package` — build green. Code review confirmed all 6 `escp.*` key names match `EscpConfig.java` exactly and all 6 exist in `printer.properties` with sane defaults. Manual verification via a real GUI launch was attempted via AppleScript/System Events automation but abandoned as unreliable and risky (the app's menu bar is embedded in the window rather than exposed as a normal accessibility menu bar; coordinate-based clicking briefly surfaced an unrelated app window on the live desktop). The user then launched the app manually and confirmed the dialog shows all 6 fields correctly, pre-populated.
 **Dependencies:** None (both `PrinterGuiApp` and `EscpConfig` already exist on this branch).
 **Files:**
 - `src/main/java/id/modefashion/printer/PrinterGuiApp.java`
