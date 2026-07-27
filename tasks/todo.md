@@ -40,10 +40,11 @@ See `tasks/plan.md` for full task details, acceptance criteria, and verification
 
 ---
 
-## Open questions to resolve before/alongside implementation
-- [ ] Exact LX-300 connection method in the field (USB-to-parallel / serial / direct parallel)
-- [ ] Exact physical length of the multi-part carbonless forms
-- [ ] Should `printer` field live on existing schema long-term, or a distinct message type eventually?
-- [ ] Default overflow policy for the E2 retry queue (reject-new / drop-oldest / hold-indefinitely)
-- [ ] Confirm ESC/P (not ESC/P2) is correct for the deployed LX-300 firmware
-- [ ] Confirm printer's own page-length setting is infinite/0 in the field
+## Open questions — resolution status
+
+- [x] **Connection method**: USB-to-serial. Confirmed correct against the official LX-300+ spec — the printer has no native USB, only "1 standard bidirectional, 8-bit parallel interface with IEEE-1284 nibble mode support, and 1 EIA-232D serial interface." A USB-to-RS232 adapter into the native serial port is the right approach. The printer's front-panel **I/F mode** setting must be set to `Serial` (or `Auto`) to match.
+- [~] **Physical form length**: official spec says continuous/multipart paper is **4–22 in** length (1 original + up to 4 copies), but the exact length actually used isn't decided yet (depends on the real forms procured) — see the page-length caveat below, which limits what's practically usable.
+- [ ] **Schema vs. distinct message type**: still open — user chose to keep the current wrapper approach for now (recommended: don't split speculatively; revisit only if concrete ESC/P-only metadata needs emerge, e.g. form templates/copy count).
+- [x] **Queue overflow policy default**: confirmed **reject-new** — matches what's already implemented (E1/E2), no code change needed.
+- [x] **ESC/P vs ESC/P2**: confirmed via official spec — `Emulation: EPSON ESC/P® and IBM® 2380 Plus`. Matches `EscpCommandBuilder`'s assumption. Note: the printer also has a front-panel **Software** setting (`ESC/P` / `IBM 2380 Plus`) that must be explicitly set to `ESC/P` — it isn't automatic.
+- [~] **"Infinite/0" page length**: **corrected, not confirmed as assumed.** No infinite/0 option exists on this hardware. The front-panel "Page length for tractor" setting is a fixed list: `3, 3.5, 4, 5.5, 6, 7, 8, 8.5, 11, 70/6 (≈11.67), 12, 14, 17` inches — **max 17 in**. If actual forms exceed 17 in (within the printer's 4–22 in handling range), the panel setting can't match exactly; this mainly affects the printer's own auto-tear-off/skip-perforation convenience, not our own ESC/P line/form-feed bytes, and the manual notes software can override the panel's top-of-form position anyway.

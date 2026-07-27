@@ -301,11 +301,13 @@
 | In-memory queue loses data on restart | Low (accepted) | Documented in F1 as a known tradeoff, not a surprise incident |
 | `PrinterGuiApp`'s single config-load path breaking on new `escp.*` keys | Low | C2 includes explicit manual load/edit/save regression check |
 
-## Open Questions
+## Open Questions — resolution status
 
-- Exact LX-300 connection method in the field (USB-to-parallel / serial / direct parallel) — needed to finalize A2's queue config.
-- Exact physical length of the multi-part carbonless forms (for DIP-switch/driver page-length configuration).
-- Whether downstream callers will reliably send the new `printer` field, or whether journal/multi-part jobs eventually warrant a distinct message type.
-- Default overflow policy for the bounded retry queue (E2) — config-driven, but needs a human-chosen default before shipping.
-- Confirmation that ESC/P (not ESC/P2) is the correct command set for the deployed LX-300 firmware.
-- Confirmation the printer's own page-length setting is set to infinite/0 in the field.
+Cross-checked against the official EPSON LX-300+ Printer's Guide (`https://files.support.epson.com/pdf/lx300p/lx300ppg.pdf`).
+
+- **RESOLVED — Connection method**: USB-to-serial, confirmed correct. The printer has no native USB — only "1 standard bidirectional, 8-bit parallel interface with IEEE-1284 nibble mode support, and 1 EIA-232D serial interface." A USB-to-RS232 adapter into the native serial port is the right call. Deployment must set the printer's front-panel **I/F mode** to `Serial` (or `Auto`) to match, and match baud rate/parity on the OS side (printer supports 19200/9600/4800/2400/1200/600/300 bps; None/Odd/Even/Ignore parity).
+- **PARTIALLY RESOLVED — Physical form length**: official spec: continuous/multipart paper is 4–22 in length, 1 original + up to 4 copies. Actual length in use still depends on the real forms procured — see the page-length finding below, which caps what's practically usable via the panel setting.
+- **STILL OPEN — Schema vs. distinct message type**: decision deferred by the user. Recommendation on record: don't split speculatively — the current backward-compatible wrapper works with zero caller friction; revisit only if concrete ESC/P-only metadata needs emerge (e.g. form templates, copy count) that would make the shared `ReceiptData` DTO awkward.
+- **RESOLVED — Queue overflow policy default**: reject-new, confirmed by the user. Matches E1/E2's existing implementation — no code change needed.
+- **RESOLVED — ESC/P vs ESC/P2**: confirmed via official spec — `Emulation: EPSON ESC/P® and IBM® 2380 Plus`. `EscpCommandBuilder`'s ESC/P assumption is correct. New deployment step identified: the printer's front-panel **Software** setting must be explicitly set to `ESC/P` (vs. `IBM 2380 Plus`) — this is not automatic and wasn't previously documented.
+- **CORRECTED, not confirmed as originally assumed — "Infinite/0" page length**: no such option exists on this hardware. The front-panel "Page length for tractor" setting is a fixed enumerated list: `3, 3.5, 4, 5.5, 6, 7, 8, 8.5, 11, 70/6 (≈11.67), 12, 14, 17` inches — max **17 in**. If real forms exceed 17 in (within the printer's stated 4–22 in handling range), the panel setting cannot match exactly. Per the manual, this mainly affects the printer's own auto-tear-off/skip-perforation convenience features (and what a bare hardware form-feed advances to), not our own ESC/P-generated line-feed/form-feed bytes — the manual explicitly notes software can override the panel's top-of-form position. Net: the plan's original assumption was wrong for this specific model; document the closest achievable panel setting (17 in max) as a known constraint rather than relying on "infinite."
