@@ -36,20 +36,25 @@ Lombok), the build fails immediately with one clear message instead of a
   as a second layer, not just a one-off fix.
 
 ## Key Assumptions to Validate
-- [ ] Full test suite still passes after hand-rolling the 2 DTOs (constructor
+- [x] Full test suite still passes after hand-rolling the 2 DTOs (constructor
       param order for `ReceiptLineData(type, content)` must match exactly —
-      verified 8 call sites depend on it)
-- [ ] No other code path relies on Lombok-generated `equals()`/`hashCode()`/
+      verified 8 call sites depend on it) — 32/32 tests pass (30 existing +
+      2 new characterization tests for `ReceiptLineData`)
+- [x] No other code path relies on Lombok-generated `equals()`/`hashCode()`/
       `toString()` for these DTOs (checked: none found in tests)
 - [ ] Adding `maven-enforcer-plugin` doesn't conflict with anything in the
       existing build (it's build-time only, no runtime footprint — low risk)
 
 ## MVP Scope
-- Rewrite `ReceiptData.java` and `ReceiptLineData.java` as plain POJOs
-- Remove the `lombok` dependency from `pom.xml`
-- Add `maven-enforcer-plugin` with `requireJavaVersion` pinned to JDK 21
-- Run `mvn clean test` under both JDK 21 and JDK 26 to confirm: JDK 21 builds
-  clean, JDK 26 fails fast with the enforcer's message (not a symbol-error wall)
+- [x] Rewrite `ReceiptData.java` and `ReceiptLineData.java` as plain POJOs
+- [x] Remove the `lombok` dependency from `pom.xml`
+- [ ] Add `maven-enforcer-plugin` with `requireJavaVersion` pinned to JDK 21
+- [x] Run `mvn clean test` under both JDK 21 and JDK 26 to confirm: JDK 21
+      builds clean **and JDK 26 (the default) now also builds and tests clean
+      with no `JAVA_HOME` override** — the Lombok removal alone already fixes
+      today's breakage. The enforcer-plugin task remains, as a guard against
+      *future* JDK drift (e.g. once `source`/`target 8` support is eventually
+      dropped by a later `javac`), not because JDK 26 is broken today.
 
 ## Not Doing (and Why)
 - Bumping `maven.compiler.source/target` off 8 — separate, bigger
