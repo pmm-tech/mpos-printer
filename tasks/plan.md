@@ -66,6 +66,15 @@
 - [~] All acceptance criteria met across A–E — **everything unit-testable from this sandbox is done and verified (30/30 tests passing, full build green); every task's real-OS/real-hardware validation leg (A2, C3, D1, E2) remains the same single open gate: no Windows/Linux/physical-LX-300 access, no sudo TTY here. See each task's notes for exactly what was and wasn't verified.**
 - [ ] Ready for review
 
+### Phase G: GUI configuration for ESC/P (added on the same branch/PR after initial review)
+
+- [x] Task G1: Add `escp.*` fields to `PrinterGuiApp`'s config dialog
+
+### Checkpoint G
+- [x] Dialog shows all 6 `EscpConfig` keys, pre-populated from `printer.properties`
+- [x] Save persists all 6 keys, matching existing dialog behavior
+- [x] Verified via a real GUI launch (this machine has an active console session with a display) — confirmed by user (and.thau@gmail.com) after manual launch, form shows updated correctly
+
 ## Task Details
 
 ### Task A1: Test scaffolding — DONE
@@ -288,6 +297,18 @@
 **Implementation notes:**
 - `printer.properties`'s `escp.*` section comments were already written well during C2/E1/E2 (each key documented at the point it was introduced) — re-read them for this task and found nothing to add.
 - `docs/escp-deployment.md` is written as a starting point for whoever eventually does the real validation, not as confirmed instructions — it says so explicitly at the top, and repeats the open-items list from A2/C3/D1/E2 so it's the one place a future reader can see what's still unverified before trusting this in production.
+
+### Task G1: Add `escp.*` fields to `PrinterGuiApp`'s config dialog
+**Description:** `showConfigDialog()` only renders fields for the original `printer.*`/`paper.*`/`font.*` keys — the 6 keys `EscpConfig` reads (`escp.printer.name`, `escp.pitch`, `escp.line.spacing`, `escp.queue.capacity`, `escp.retry.max.attempts`, `escp.retry.backoff.ms`) are only editable by hand-editing `printer.properties`. Add one `JTextField` per key, following the exact existing pattern (pre-populated via `config.getString(...)`, added to `formPanel` with a `JLabel`, written back via `config.setProperty(...)` in the Save handler). Add a bold section-header `JLabel` ("ESC/P (Continuous Form)") before the new fields, and inline hints on `escp.pitch` ("10=Pica, 12=Elite") and `escp.retry.backoff.ms` ("ms") — matching the existing inline-hint convention already used on `paper.orientation`. No validation (matches existing dialog's total lack of validation on any field).
+**Acceptance criteria:**
+- [x] All 6 `escp.*` keys have a labeled field in the dialog, pre-populated with current config values
+- [x] Save writes all 6 fields back via `config.setProperty(...)` before `config.save()`, alongside the existing 13
+- [x] Dialog still opens/renders/scrolls correctly with 19 total fields (already wrapped in `JScrollPane` — no layout rework expected)
+**Verification:** `mvn clean package` — build green. Code review confirmed all 6 `escp.*` key names match `EscpConfig.java` exactly and all 6 exist in `printer.properties` with sane defaults. Manual verification via a real GUI launch was attempted via AppleScript/System Events automation but abandoned as unreliable and risky (the app's menu bar is embedded in the window rather than exposed as a normal accessibility menu bar; coordinate-based clicking briefly surfaced an unrelated app window on the live desktop). User (and.thau@gmail.com) then launched the app manually and confirmed the dialog shows all 6 fields correctly, pre-populated.
+**Dependencies:** None (both `PrinterGuiApp` and `EscpConfig` already exist on this branch).
+**Files:**
+- `src/main/java/id/modefashion/printer/PrinterGuiApp.java`
+**Estimated scope:** S (1 file).
 
 ## Risks and Mitigations
 

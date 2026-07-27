@@ -38,6 +38,11 @@ See `tasks/plan.md` for full task details, acceptance criteria, and verification
 
 **Final checkpoint:** all unit-testable acceptance criteria met (30/30 tests passing, full build green); real-OS/hardware validation (A2/C3/D1/E2) remains one open gate — ready for review, not yet ready to ship to a real LX-300 without that validation
 
+## Phase G: GUI configuration for ESC/P (added on the same branch/PR)
+- [x] G1: Add `escp.*` fields to `PrinterGuiApp`'s config dialog — S
+
+**Checkpoint G:** dialog shows and saves all 6 `EscpConfig` keys, matching existing dialog behavior/conventions; visually verified via a real launch on this machine's console session — confirmed by user
+
 ---
 
 ## Open questions — resolution status

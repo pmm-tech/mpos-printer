@@ -113,6 +113,12 @@ public class PrinterGuiApp extends JFrame {
         JTextField fontFamilyField = new JTextField(config.getString("font.family"));
         JTextField fontSizeField = new JTextField(config.getString("font.size"));
         JTextField fontLineHeightField = new JTextField(config.getString("font.line.height"));
+        JTextField escpPrinterNameField = new JTextField(config.getString("escp.printer.name"));
+        JTextField escpPitchField = new JTextField(config.getString("escp.pitch"));
+        JTextField escpLineSpacingField = new JTextField(config.getString("escp.line.spacing"));
+        JTextField escpQueueCapacityField = new JTextField(config.getString("escp.queue.capacity"));
+        JTextField escpRetryMaxAttemptsField = new JTextField(config.getString("escp.retry.max.attempts"));
+        JTextField escpRetryBackoffField = new JTextField(config.getString("escp.retry.backoff.ms"));
 
         formPanel.add(new JLabel("Printer Port:"));
         formPanel.add(portField);
@@ -141,6 +147,22 @@ public class PrinterGuiApp extends JFrame {
         formPanel.add(new JLabel("Font Line Height:"));
         formPanel.add(fontLineHeightField);
 
+        JLabel escpSectionLabel = new JLabel("ESC/P (Continuous Form)");
+        escpSectionLabel.setFont(escpSectionLabel.getFont().deriveFont(Font.BOLD));
+        formPanel.add(escpSectionLabel);
+        formPanel.add(new JLabel("ESC/P Printer Name (raw queue):"));
+        formPanel.add(escpPrinterNameField);
+        formPanel.add(new JLabel("ESC/P Pitch (10=Pica, 12=Elite):"));
+        formPanel.add(escpPitchField);
+        formPanel.add(new JLabel("ESC/P Line Spacing (n/180 inch):"));
+        formPanel.add(escpLineSpacingField);
+        formPanel.add(new JLabel("ESC/P Queue Capacity:"));
+        formPanel.add(escpQueueCapacityField);
+        formPanel.add(new JLabel("ESC/P Retry Max Attempts:"));
+        formPanel.add(escpRetryMaxAttemptsField);
+        formPanel.add(new JLabel("ESC/P Retry Backoff (ms):"));
+        formPanel.add(escpRetryBackoffField);
+
         dialog.add(new JScrollPane(formPanel), BorderLayout.CENTER);
 
         JButton saveButton = new JButton("Save");
@@ -159,6 +181,12 @@ public class PrinterGuiApp extends JFrame {
                 config.setProperty("font.family", fontFamilyField.getText());
                 config.setProperty("font.size", fontSizeField.getText());
                 config.setProperty("font.line.height", fontLineHeightField.getText());
+                config.setProperty("escp.printer.name", escpPrinterNameField.getText());
+                config.setProperty("escp.pitch", escpPitchField.getText());
+                config.setProperty("escp.line.spacing", escpLineSpacingField.getText());
+                config.setProperty("escp.queue.capacity", escpQueueCapacityField.getText());
+                config.setProperty("escp.retry.max.attempts", escpRetryMaxAttemptsField.getText());
+                config.setProperty("escp.retry.backoff.ms", escpRetryBackoffField.getText());
                 config.save();
                 JOptionPane.showMessageDialog(dialog, "Configuration saved. Please restart the server to apply changes.");
                 dialog.dispose();
