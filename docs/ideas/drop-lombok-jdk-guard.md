@@ -42,13 +42,16 @@ Lombok), the build fails immediately with one clear message instead of a
       2 new characterization tests for `ReceiptLineData`)
 - [x] No other code path relies on Lombok-generated `equals()`/`hashCode()`/
       `toString()` for these DTOs (checked: none found in tests)
-- [ ] Adding `maven-enforcer-plugin` doesn't conflict with anything in the
+- [x] Adding `maven-enforcer-plugin` doesn't conflict with anything in the
       existing build (it's build-time only, no runtime footprint — low risk)
+      — confirmed: `mvn clean package` under JDK 21 still succeeds (32/32
+      tests) with the plugin bound to the `validate` phase
 
 ## MVP Scope
 - [x] Rewrite `ReceiptData.java` and `ReceiptLineData.java` as plain POJOs
 - [x] Remove the `lombok` dependency from `pom.xml`
-- [ ] Add `maven-enforcer-plugin` with `requireJavaVersion` pinned to JDK 21
+- [x] Add `maven-enforcer-plugin` with `requireJavaVersion` pinned to JDK 21
+      (`[21,22)`, `maven-enforcer-plugin:3.6.3`, bound to `validate`)
 - [x] Run `mvn clean test` under both JDK 21 and JDK 26 to confirm: JDK 21
       builds clean **and JDK 26 (the default) now also builds and tests clean
       with no `JAVA_HOME` override** — the Lombok removal alone already fixes
