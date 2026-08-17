@@ -1,10 +1,8 @@
 package id.modefashion.printer;
 
-import java.lang.reflect.Type;
 import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.configuration.PropertiesConfiguration;
@@ -14,22 +12,29 @@ import org.java_websocket.server.WebSocketServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-
-import id.modefashion.printer.dto.ReceiptLineData;
-import id.modefashion.printer.worker.ReceiptWorker;
-import id.modefashion.printer.worker.ReceiptWorkerString;
+import id.modefashion.printer.backend.EscpJobQueue;
+import id.modefashion.printer.backend.EscpPrinterBackend;
+import id.modefashion.printer.backend.Graphics2DPrinterBackend;
+import id.modefashion.printer.backend.JobRouter;
+import id.modefashion.printer.backend.RetryPolicy;
+import id.modefashion.printer.escp.EscpConfig;
 
 public class PrintServer extends WebSocketServer {
   private Set<WebSocket> connections;
   private PropertiesConfiguration config;
+  private JobRouter jobRouter;
+  private EscpJobQueue escpJobQueue;
   private static final Logger logger = LoggerFactory.getLogger(PrintServer.class);
 
   public PrintServer(PropertiesConfiguration config) {
     super(new InetSocketAddress(config.getInt("printer.port")));
     this.connections = Collections.synchronizedSet(new HashSet<WebSocket>());
     this.config = config;
+    EscpConfig escpConfig = new EscpConfig(config);
+    RetryPolicy retryPolicy = new RetryPolicy(escpConfig.retryMaxAttempts(), escpConfig.retryBackoffMillis());
+    this.escpJobQueue = new EscpJobQueue(new EscpPrinterBackend(config), escpConfig.queueCapacity(), retryPolicy);
+    this.escpJobQueue.start();
+    this.jobRouter = new JobRouter(new Graphics2DPrinterBackend(config), this.escpJobQueue);
   }
 
   @Override
@@ -45,17 +50,7 @@ public class PrintServer extends WebSocketServer {
   @Override
   public void onMessage(WebSocket conn, String message) {
     logger.debug("================== NEW RECEIPT MESSAGE ==================");
-    Type listType = new TypeToken<List<ReceiptLineData>>() {
-    }.getType();
-    if (message.contains("type")) {
-      List<ReceiptLineData> data = new Gson().fromJson(message, listType);
-      ReceiptWorker worker = new ReceiptWorker(data, this.config);
-      worker.proceed();
-    } else {
-      String data_string = message;
-      ReceiptWorkerString worker = new ReceiptWorkerString(data_string, this.config);
-      worker.proceed();
-    }
+    jobRouter.route(message);
     logger.debug("================== END RECEIPT MESSAGE ==================");
     // sendResponse("Success");
   }
